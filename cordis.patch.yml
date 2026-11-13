@@ -1,0 +1,32 @@
+# @kirara/dsh-plugin-avalonia-mcp —— bundle patch
+#
+# 这是一个「bundle 包」的 patch 文件：DSH 加载该包时读 package.json 的
+# `dsh.bundle.patch` 字段，把本文件作为一个 insert 层覆盖到 profile 树上。
+#
+# 顶层是数组，元素形如 `- insert: [ <entry>, ... ]`；
+# entry 的 `name` 是 ESM 模块说明符（包名或路径）。
+#
+# 本文件只做两件事：
+#   1. 挂上 MCP 客户端，让 cdp-cli 的 10 个工具以 mcp__avalonia__* 出现；
+#   2. 挂上本插件自己的宿主工具（avalonia_*）。
+#
+# ⚠️ 若 profile 的 cordis.patch.yml 里还留着早期手工加的 mcp-avalonia-cdp，
+#    会与这里产生同名 serverName 冲突，必须删掉那一块（见 README）。
+- insert:
+    - id: avalonia-mcp
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: avalonia
+        transport: stdio
+        command: cdp-cli
+        args: ['mcp']
+
+    - id: avalonia-mcp-tools
+      name: '@kirara/dsh-plugin-avalonia-mcp'
+      config:
+        appProjectDir: ''
+        exeRelativePath: 'bin/Debug/net10.0/Kirara_Server_APP.exe'
+        processName: 'Kirara_Server_APP'
+        bridgeProcessName: 'cdp-cli'
+        cdpPort: 9222
+        launchTimeoutMs: 60000

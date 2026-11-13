@@ -1,0 +1,33 @@
+{
+  "name": "@kirara/dsh-plugin-avalonia-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Avalonia 前端 MCP 基建：自动接好 cdp-cli MCP 服务，并提供构建 / 启动 / 重启 / 重连 / 体检 / 选择器指南等宿主工具",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": {
+      "default": "./lib/index.js"
+    },
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/",
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "license": "MIT",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/dsh-tools": "^0.2.0-rc.2",
+    "@deepseek-ai/schemastery": "~3.18.4"
+  }
+}
