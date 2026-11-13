@@ -17,7 +17,7 @@
  */
 
 import { spawnSync } from 'node:child_process';
-import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -129,6 +129,19 @@ const installed = join(profileDir, 'node_modules', ...PLUGIN_NAME.split('/'));
 if (!existsSync(installed)) fail('pnpm 已结束但没看到安装目录：' + installed);
 mkdirSync(dirname(installed), { recursive: true });
 console.log('✓ 已安装到 ' + installed);
+
+// file: 安装是**拷贝**，源码改过之后 pnpm 不一定会重新拷；这里强制同步一次，
+// 保证「profile 里的副本」与「源码」逐字节一致（否则改了代码却跑旧实现）。
+const installedLib = join(installed, 'lib');
+mkdirSync(installedLib, { recursive: true });
+for (const file of readdirSync(join(PACKAGE_DIR, 'lib'))) {
+  copyFileSync(join(PACKAGE_DIR, 'lib', file), join(installedLib, file));
+}
+for (const file of ['package.json', 'cordis.patch.yml', 'README.md']) {
+  const from = join(PACKAGE_DIR, file);
+  if (existsSync(from)) copyFileSync(from, join(installed, file));
+}
+console.log('✓ 已同步 lib/ 与 cordis.patch.yml');
 
 console.log('');
 console.log('下一步：');
