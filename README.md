@@ -1,83 +1,49 @@
 # @kirara/dsh-plugin-avalonia-mcp
 
-把「用 MCP 读/调 Avalonia 前端」从手工配置变成一次安装，并且**自带 GitHub 自更新**（与 `@kirara/dsh-plugin-kirara-dev` / `-theme` 同款内核）。
+简体中文 | [English](./README.en.md)
+
+**把「AI 改 Avalonia 界面」的开发循环，从一堆手工步骤变成一个装完就能用的插件。**
 
 ## 它解决什么
 
-之前接 Avalonia 前端要手工做四件事：装 `cdp-cli`、给应用加 `Chrome.DevTools.Avalonia`、在 profile 的 `cordis.patch.yml` 里手写 `dsh-mcp-client` 行、应用重启后手动杀桥进程重连。
-这个插件把后两件事固化下来，把第一、三件做成可检查、可执行的工具，并让插件自己跟着 GitHub 走。
+接 Avalonia 前端原本要手工做四件事：装 `cdp-cli`、给应用工程加 `Chrome.DevTools.Avalonia`、在 profile 的 `cordis.patch.yml` 里手写 `dsh-mcp-client` 行、应用重启后手动杀桥进程重连。
 
-## 组成
+本插件**把后两件固化**下来，**把前两件做成可检查、可执行的工具**（`avalonia_doctor` 逐项体检并给出修复命令），并让插件自己跟着 GitHub 走。
 
-| 部分 | 作用 |
-|---|---|
-| `cordis.patch.yml` | bundle patch：insert `dsh-mcp-client`（serverName=avalonia，`cdp-cli mcp`）+ 本插件自己的行 |
-| `lib/index.js` | 引导层：挂实现、跑自更新状态机、暴露路由与 `avalonia_update` |
-| `lib/impl.js` | 实现层：7 个 `avalonia_*` 开发循环工具（自更新时整体替换） |
-| `lib/update.js` | 自更新内核（零依赖，与另两个 kirara 插件逐字节相同） |
-| `scripts/deploy.mjs` | 幂等装进 profile（依赖 + bundles + pnpm install，带备份） |
-| `scripts/stamp.mjs` | 写发版印章 `BUNDLED_SHA` |
-| `scripts/check-kernel-parity.mjs` | 内核漂移校验 |
+> **底层不是本项目的。** CDP 服务端与 `cdp-cli` 来自 [wieslawsoltes/CDP](https://github.com/wieslawsoltes/CDP)（NuGet `Chrome.DevTools.Avalonia`、dotnet tool `Chrome.DevTools.Cli`）。本项目只做**编排、诊断、分发**。
 
 ## 工具
 
-| 工具 | 用途 |
-|---|---|
-| `avalonia_status` | 应用进程 / CDP 端口 / MCP 桥 / exe 是否过期，一次看全 |
-| `avalonia_launch` | 没跑就启动，并等 CDP 就绪 |
-| `avalonia_restart` | 停应用 → 启动 → 等 CDP → 重启 MCP 桥（应用重启后桥会掉线，这是标配动作） |
-| `avalonia_reconnect` | 只重启桥，不动应用 |
-| `avalonia_build` | `dotnet build`（Debug 含 CDP，Release 不含） |
-| `avalonia_doctor` | 全链路体检：cdp-cli、包引用、`CdpServer.Start`、exe、端口 |
-| `avalonia_guide` | 选择器约定与四个已知坑（中文选择器、隐藏页面、`:nth-child`、重启掉线） |
-| `avalonia_update` | 插件自更新：`status` / `check` / `sync` / `rollback` |
-
-## 自更新
-
-引导层把 `lib/impl.js` 挂成子 fiber；同步时依次：
-
-1. 查远端实现层提交（`GET /repos/<repo>/commits?path=lib/impl.js`，失败退回 `info/refs`）；
-2. 下 `codeload.github.com/<repo>/tar.gz/<sha>`；
-3. 内置 ustar 解包（零第三方依赖，pnpm 不参与）；
-4. 校验产物（包名 + 必须含 `lib/impl.js`）；
-5. 备份旧的 `lib/`、`locale/` 后覆盖；
-6. `dispose` 旧实现 → `import('…/impl.js?v=<sha>')` → 重新挂载 —— **不重启 DSH 即时生效**。
-
-新实现挂载失败会自动装回旧实现。
-
-### 触发方式
-
-- 模型：`avalonia_update` 工具（`status` / `check` / `sync` / `rollback`）；
-- 脚本：`GET /kirara-avalonia-mcp-update/state`、`POST .../check|sync|rollback`（同源校验）；
-- 自动：启动后查一次（只查不装），之后每 6 小时一次。
-
-### 配置
-
-写在 profile 的 `cordis.patch.yml` 的 `avalonia-mcp-tools` 行（配置级 HMR，改完立刻生效）：
-
-| 键 | 默认 | 说明 |
+| 工具 | 用途 | 语义 |
 |---|---|---|
-| `updateChannel` | `main` | 跟随哪个分支/标签 |
-| `updateAutoCheck` | `true` | 启动后自动查一次，之后每 6 小时 |
-| `updateStoreRoot` | 空 | 留空 = `<DSH_HOME>/kirara-plugins` |
-| `updateRoutePath` | `/kirara-avalonia-mcp-update` | 路由前缀 |
+| `avalonia_status` | 应用进程 / CDP 端口 / MCP 桥 / exe 是否过期，一次看全 | 只读 · 幂等 |
+| `avalonia_launch` | 没跑就启动，并等 CDP 就绪 | 幂等 |
+| `avalonia_restart` | 停应用 → 启动 → 等 CDP → 重启桥（应用重启后桥会掉线，这是标配动作） | **破坏性** |
+| `avalonia_reconnect` | 只重启桥，不动应用 | 幂等 |
+| `avalonia_build` | `dotnet build`（Debug 含 CDP，Release 不含） | 幂等 · 联网 |
+| `avalonia_doctor` | 全链路体检：cdp-cli、包引用、`CdpServer.Start`、exe、端口 | 只读 · 幂等 |
+| `avalonia_guide` | 选择器约定与四个已知坑（中文选择器、隐藏页面、`:nth-child`、重启掉线） | 只读 · 幂等 |
+| `avalonia_update` | 插件自更新：`status` / `check` / `sync` / `rollback` | **破坏性** · 联网 |
 
-### 产物位置
+MCP 的四个 hint（`readOnlyHint` / `destructiveHint` / `idempotentHint` / `openWorldHint`）**默认值全在「不安全」一侧**——破坏性默认就是 `true`。所以每个工具的 `description` 末尾都带一行 `MCP hints: …`，取值与依据：
 
-```
-<DSH_HOME>/kirara-plugins/@kirara-dsh-plugin-avalonia-mcp/
-├── state.json                 当前/上一个提交、远端检查结果、历史
-├── releases/<sha>/            解开并校验过的产物
-└── backups/<sha>-<时间戳>/     被覆盖前的 lib/ 与 locale/
-```
+<details>
+<summary>展开：8 个工具的完整 hint 取值</summary>
 
-包目录里的 `release.json` 记录「现在这份是哪个提交同步来的」。
+| 工具 | readOnlyHint | destructiveHint | idempotentHint | openWorldHint | 依据 |
+|---|:---:|:---:|:---:|:---:|---|
+| `avalonia_status` | ✅ | — | ✅ | — | 只读进程 / 端口 / exe 时间戳 |
+| `avalonia_launch` | — | — | ✅ | — | 已在运行则提前返回，无额外副作用 |
+| `avalonia_restart` | — | ✅ | — | — | 会 kill 应用进程，未保存状态丢失 |
+| `avalonia_reconnect` | — | — | ✅ | — | 只 kill 无状态的 `cdp-cli` 桥 |
+| `avalonia_build` | — | — | ✅ | ✅ | 写 `bin/obj`，NuGet restore 联网 |
+| `avalonia_doctor` | ✅ | — | ✅ | — | 只读工程文件、exe、端口 |
+| `avalonia_guide` | ✅ | — | ✅ | — | 返回静态文本 |
+| `avalonia_update` | — | ✅ | — | ✅ | 下载并覆盖 `lib/`，需连 GitHub |
 
-### 已知边界
+</details>
 
-- **pnpm 会还原**：在 profile 里跑 `pnpm install` 会把包目录恢复成清单里的版本；引导层发现 `release.json` 与实现不匹配时会回到随包实现。
-- **一次只允许一个同步任务**，重复触发得到「已有任务进行中」。
-- 需要能连上 GitHub（走 DSH 的统一代理策略，普通 `fetch`）。
+DSH 的 `defineTool` 没有注解字段（多传会被静默丢弃），因此在 `lib/impl.js` 的 `TOOL_HINTS` 里声明一次、由包装层自动追加到每个工具的 `description`。`mcp__avalonia__*` 那 10 个 MCP 工具的注解属于上游 `Chrome.DevTools.Cli`，不在本仓库。
 
 ## 安装
 
@@ -99,17 +65,29 @@ node scripts/deploy.mjs             # 写入 + pnpm install
 
 `avalonia_doctor` 会逐项检查以上内容并给出修复命令。
 
-## 开发
+## 自更新
+
+同步时：查远端 `lib/impl.js` 的最近提交 → 下 `codeload` 的 tar.gz → 内置 ustar 解包（零第三方依赖）→ 校验包名与产物 → 备份 `lib/`、`locale/` 后覆盖 → 换 `?v=<sha>` 重新 import —— **不重启 DSH 即时生效**；挂载失败自动装回旧实现。
+
+- **触发**：`avalonia_update` 工具；`/kirara-avalonia-mcp-update/state|check|sync|rollback` 路由（同源校验）；启动后自动查一次，之后每 6 小时（只查不装）。
+- **产物**：`<DSH_HOME>/kirara-plugins/@kirara-dsh-plugin-avalonia-mcp/`（`state.json`、`releases/`、`backups/`）。
+- **配置**：写在 profile `cordis.patch.yml` 的 `avalonia-mcp-tools` 行，改完立刻生效（配置级 HMR）。
+
+| 键 | 默认 | 说明 |
+|---|---|---|
+| `updateChannel` | `main` | 跟随哪个分支/标签 |
+| `updateAutoCheck` | `true` | 启动后自动查一次，之后每 6 小时 |
+| `updateStoreRoot` | 空 | 留空 = `<DSH_HOME>/kirara-plugins` |
+| `updateRoutePath` | `/kirara-avalonia-mcp-update` | 路由前缀 |
+
+- **已知边界**：profile 里跑 `pnpm install` 会把包目录还原成清单版本（引导层检测到 `release.json` 不匹配时回退随包实现）；同一时间只允许一个同步任务；需要能连上 GitHub。
+
+## 开发 / 卸载
 
 ```bash
 node scripts/stamp.mjs               # 发版前写 BUNDLED_SHA（--check 只校验）
-node scripts/check-kernel-parity.mjs # 内核与兄弟仓库逐字节比对
+node scripts/check-kernel-parity.mjs # 更新内核与兄弟仓库逐字节比对
+node scripts/deploy.mjs --disable    # 从 bundles 移除（重启后插件工具消失）
 ```
 
-## 卸载 / 回滚
-
-```bash
-node scripts/deploy.mjs --disable   # 从 bundles 移除（重启后插件工具消失）
-```
-
-`deploy.mjs` 每次安装前把 `package.json` / `pnpm-lock.yaml` 备份成 `*.bak-<时间戳>`。
+`lib/index.js` 是引导层（自更新状态机、路由、`avalonia_update`），`lib/impl.js` 是实现层（7 个开发循环工具，自更新时整体替换）。`deploy.mjs` 每次安装前把 `package.json` / `pnpm-lock.yaml` 备份成 `*.bak-<时间戳>`。
