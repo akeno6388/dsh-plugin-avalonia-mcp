@@ -71,6 +71,7 @@ After installing you **must**:
 On sync: resolve the latest commit that touched `lib/` (stamp-only and docs-only commits do not count as an update) → download the `codeload` tarball for that sha → unpack with the built-in ustar reader (no third-party deps) → validate the package name and payload → back up `lib/` and `locale/` → rewrite with `?v=<sha>` and re-import — **effective immediately, no DSH restart**; a failed mount falls back to the previous implementation.
 
 - **Trigger:** this plugin's detail page in the plugin manager (badge + Check / Sync buttons + a status section, rendered by `lib/client.js`); the `avalonia_update` tool; the `/kirara-avalonia-mcp-update/state|check|sync|rollback` routes (same-origin checked); once at startup and every 6 hours afterwards (check only, no install).
+- **After you click Sync:** the host hot-reloads the implementation right away. If the browser half (`lib/client.js`) changed too, the detail page shows a notice and **reloads the page once automatically**; if the remote `package.json` differs from the local one (manifest changes such as a new `dsh.client` or export), self-update cannot deliver it and you get an explicit "reinstall + restart DSH" notice. The check lives in `lib/manifest.js`, the record in `last-apply.json` inside the store directory, and `GET /state` returns it as `lastApply`.
 - **State:** `<DSH_HOME>/kirara-plugins/@kirara-dsh-plugin-avalonia-mcp/` (`state.json`, `releases/`, `backups/`).
 - **Config:** write it on the `avalonia-mcp-tools` entry in the profile's `cordis.patch.yml`; changes apply immediately (config-level HMR).
 
@@ -81,7 +82,7 @@ On sync: resolve the latest commit that touched `lib/` (stamp-only and docs-only
 | `updateStoreRoot` | empty | Empty = `<DSH_HOME>/kirara-plugins` |
 | `updateRoutePath` | `/kirara-avalonia-mcp-update` | Route prefix |
 
-- **Known limits:** running `pnpm install` in the profile restores the package directory to the manifest version (the boot layer falls back to the bundled implementation when `release.json` no longer matches); only one sync job at a time; GitHub must be reachable.
+- **Known limits:** running `pnpm install` in the profile restores the package directory to the manifest version (the boot layer falls back to the bundled implementation when `release.json` no longer matches); sync only covers `lib/` and `locale/`, so manifest changes in `package.json` cannot arrive through self-update (you are told to reinstall); only one sync job at a time; GitHub must be reachable.
 
 ## Development / uninstall
 

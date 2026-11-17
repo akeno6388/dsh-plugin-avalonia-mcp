@@ -71,6 +71,7 @@ node scripts/deploy.mjs             # 写入 + pnpm install
 同步时：查远端 `lib/` 的最近提交（只动了印章或文档的提交不算「有更新」）→ 下 `codeload` 的 tar.gz → 内置 ustar 解包（零第三方依赖）→ 校验包名与产物 → 备份 `lib/`、`locale/` 后覆盖 → 换 `?v=<sha>` 重新 import —— **不重启 DSH 即时生效**；挂载失败自动装回旧实现。
 
 - **触发**：插件管理页里本插件的详情页（标题徽标 + 「检查更新 / 同步更新」按钮 + 页尾状态区，由 `lib/client.js` 提供）；`avalonia_update` 工具；`/kirara-avalonia-mcp-update/state|check|sync|rollback` 路由（同源校验）；启动后自动查一次，之后每 6 小时（只查不装）。
+- **点完「同步更新」之后**：宿主当场热重载实现；若这次也换了浏览器半边（`lib/client.js`），详情页会提示并**自动刷新页面一次**（不用手动刷新）；若远端 `package.json` 与本地不同（清单类改动，例如新增 `dsh.client` / 新 exports），自更新送不到，会明确提示「需要重装插件并重启 DSH」。判定逻辑在 `lib/manifest.js`，记录写在产物目录的 `last-apply.json`，`GET /state` 会带出 `lastApply`。
 - **产物**：`<DSH_HOME>/kirara-plugins/@kirara-dsh-plugin-avalonia-mcp/`（`state.json`、`releases/`、`backups/`）。
 - **配置**：写在 profile `cordis.patch.yml` 的 `avalonia-mcp-tools` 行，改完立刻生效（配置级 HMR）。
 
@@ -81,7 +82,7 @@ node scripts/deploy.mjs             # 写入 + pnpm install
 | `updateStoreRoot` | 空 | 留空 = `<DSH_HOME>/kirara-plugins` |
 | `updateRoutePath` | `/kirara-avalonia-mcp-update` | 路由前缀 |
 
-- **已知边界**：profile 里跑 `pnpm install` 会把包目录还原成清单版本（引导层检测到 `release.json` 不匹配时回退随包实现）；同一时间只允许一个同步任务；需要能连上 GitHub。
+- **已知边界**：profile 里跑 `pnpm install` 会把包目录还原成清单版本（引导层检测到 `release.json` 不匹配时回退随包实现）；同步只覆盖 `lib/` 与 `locale/`，`package.json` 这类清单改动无法靠自更新送达（会提示重装）；同一时间只允许一个同步任务；需要能连上 GitHub。
 
 ## 开发 / 卸载
 
