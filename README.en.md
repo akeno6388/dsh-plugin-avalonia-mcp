@@ -68,7 +68,7 @@ After installing you **must**:
 
 ## Self-update
 
-On sync: resolve the latest commit that touched `lib/impl.js` → download the `codeload` tarball for that sha → unpack with the built-in ustar reader (no third-party deps) → validate the package name and payload → back up `lib/` and `locale/` → rewrite with `?v=<sha>` and re-import — **effective immediately, no DSH restart**; a failed mount falls back to the previous implementation.
+On sync: resolve the latest commit that touched `lib/` (stamp-only and docs-only commits do not count as an update) → download the `codeload` tarball for that sha → unpack with the built-in ustar reader (no third-party deps) → validate the package name and payload → back up `lib/` and `locale/` → rewrite with `?v=<sha>` and re-import — **effective immediately, no DSH restart**; a failed mount falls back to the previous implementation.
 
 - **Trigger:** this plugin's detail page in the plugin manager (badge + Check / Sync buttons + a status section, rendered by `lib/client.js`); the `avalonia_update` tool; the `/kirara-avalonia-mcp-update/state|check|sync|rollback` routes (same-origin checked); once at startup and every 6 hours afterwards (check only, no install).
 - **State:** `<DSH_HOME>/kirara-plugins/@kirara-dsh-plugin-avalonia-mcp/` (`state.json`, `releases/`, `backups/`).
