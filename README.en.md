@@ -55,7 +55,8 @@ node scripts/deploy.mjs             # write + pnpm install
 After installing you **must**:
 
 1. Delete the earlier hand-written `mcp-avalonia-cdp` insert block from the profile's `cordis.patch.yml` (duplicate serverName conflicts);
-2. Restart DSH — `dsh.profile.bundles` is only read at startup.
+2. Restart DSH — `dsh.profile.bundles` is only read at startup;
+3. Refresh the browser — the detail-page update controls are a `dsh.client` plugin and load with the page.
 
 ## Prerequisites
 
@@ -69,7 +70,7 @@ After installing you **must**:
 
 On sync: resolve the latest commit that touched `lib/impl.js` → download the `codeload` tarball for that sha → unpack with the built-in ustar reader (no third-party deps) → validate the package name and payload → back up `lib/` and `locale/` → rewrite with `?v=<sha>` and re-import — **effective immediately, no DSH restart**; a failed mount falls back to the previous implementation.
 
-- **Trigger:** the `avalonia_update` tool; the `/kirara-avalonia-mcp-update/state|check|sync|rollback` routes (same-origin checked); once at startup and every 6 hours afterwards (check only, no install).
+- **Trigger:** this plugin's detail page in the plugin manager (badge + Check / Sync buttons + a status section, rendered by `lib/client.js`); the `avalonia_update` tool; the `/kirara-avalonia-mcp-update/state|check|sync|rollback` routes (same-origin checked); once at startup and every 6 hours afterwards (check only, no install).
 - **State:** `<DSH_HOME>/kirara-plugins/@kirara-dsh-plugin-avalonia-mcp/` (`state.json`, `releases/`, `backups/`).
 - **Config:** write it on the `avalonia-mcp-tools` entry in the profile's `cordis.patch.yml`; changes apply immediately (config-level HMR).
 

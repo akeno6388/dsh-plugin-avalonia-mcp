@@ -55,7 +55,8 @@ node scripts/deploy.mjs             # 写入 + pnpm install
 安装后**必须**：
 
 1. 删掉 profile `cordis.patch.yml` 里早期手工加的 `mcp-avalonia-cdp` insert 块（同名 serverName 会冲突）；
-2. 重启 DSH —— `dsh.profile.bundles` 只在启动时读取。
+2. 重启 DSH —— `dsh.profile.bundles` 只在启动时读取；
+3. 刷新浏览器页面 —— 详情页的更新控件是客户端插件（`dsh.client`），随页面加载。
 
 ## 前置条件
 
@@ -69,7 +70,7 @@ node scripts/deploy.mjs             # 写入 + pnpm install
 
 同步时：查远端 `lib/impl.js` 的最近提交 → 下 `codeload` 的 tar.gz → 内置 ustar 解包（零第三方依赖）→ 校验包名与产物 → 备份 `lib/`、`locale/` 后覆盖 → 换 `?v=<sha>` 重新 import —— **不重启 DSH 即时生效**；挂载失败自动装回旧实现。
 
-- **触发**：`avalonia_update` 工具；`/kirara-avalonia-mcp-update/state|check|sync|rollback` 路由（同源校验）；启动后自动查一次，之后每 6 小时（只查不装）。
+- **触发**：插件管理页里本插件的详情页（标题徽标 + 「检查更新 / 同步更新」按钮 + 页尾状态区，由 `lib/client.js` 提供）；`avalonia_update` 工具；`/kirara-avalonia-mcp-update/state|check|sync|rollback` 路由（同源校验）；启动后自动查一次，之后每 6 小时（只查不装）。
 - **产物**：`<DSH_HOME>/kirara-plugins/@kirara-dsh-plugin-avalonia-mcp/`（`state.json`、`releases/`、`backups/`）。
 - **配置**：写在 profile `cordis.patch.yml` 的 `avalonia-mcp-tools` 行，改完立刻生效（配置级 HMR）。
 

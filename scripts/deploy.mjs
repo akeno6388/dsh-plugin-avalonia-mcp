@@ -137,7 +137,7 @@ mkdirSync(installedLib, { recursive: true });
 for (const file of readdirSync(join(PACKAGE_DIR, 'lib'))) {
   copyFileSync(join(PACKAGE_DIR, 'lib', file), join(installedLib, file));
 }
-for (const file of ['package.json', 'cordis.patch.yml', 'README.md']) {
+for (const file of ['package.json', 'cordis.patch.yml', 'README.md', 'README.en.md']) {
   const from = join(PACKAGE_DIR, file);
   if (existsSync(from)) copyFileSync(from, join(installed, file));
 }
